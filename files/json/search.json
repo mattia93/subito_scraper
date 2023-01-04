@@ -1,11 +1,18 @@
 [{
     "string": "first_object",
     "min_price": null,
-    "max_price": null
+    "max_price": null,
+    "region": "region_to_search_in - optional",
+    "province": "province_to_search_in - optional",
+    "city": "city_to_search_in - optional"
 
+ 
 },
 {
     "string": "second_object",
     "min_price": null,
-    "max_price": null
+    "max_price": null,
+    "region": "region_to_search_in - optional",
+    "province": "province_to_search_in - optional",
+    "city": "city_to_search_in - optional"
 }]
