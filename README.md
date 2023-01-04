@@ -15,6 +15,32 @@ python code/scraper.py
 ```
 
 ## Usage
+### Edit search.json file
+The `search.json` file contains the search parameters. You can edit it with the following command:
+```bash
+vim files/json/search.json
+```
+
+You can edit the search parameters like this:
+```json
+[
+    {
+        "name": "search1",
+        "min_price": 100,
+        "max_price": 200
+    },
+    {
+        "name": "search2",
+        "min_price": null,
+        "max_price": 300
+    },
+    {
+        "name": "search3",
+        "min_price": 400,
+        "max_price": null
+    }
+]
+```
 
 ### Usage with Discord webhook
 In order to send the results to a discord channel, you need to specify the webhook url in the `.env` file.
@@ -27,6 +53,7 @@ vim .env
 You can then add your url variable like this:
 ```txt
 url=https://discordapp.com/api/webhooks/...
+searches_file_path="./files/json/search.json"
 use_discord=true
 save_as_html=false
 ```
@@ -40,6 +67,7 @@ vim .env
 
 You can then add your url variable like this:
 ```txt
+searches_file_path="./files/json/search.json"
 use_discord=false
 save_as_html=true
 ```

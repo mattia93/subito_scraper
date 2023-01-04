@@ -32,6 +32,9 @@ class FIELDS:
         return class_._instance
 
     STRING = "string"
+    REGION = "region"
+    PROVINCE = "province"
+    CITY = "city"
 
 
 def is_from_rivenditore(obj: bs4.element.Tag):
@@ -119,8 +122,15 @@ def is_most_recent(obj: bs4.element.Tag, last_search: datetime.datetime):
     return date > last_search
 
 
+def change_spaces_to_dots(region: str):
+    return region.lower().replace(" ", "-")    
+
+
 def search_item(
     string: str,
+    region: str = None,
+    province: str = None,
+    city: str = None,
     pages_number: int = 5,
     min_price: int = None,
     max_price: int = None,
@@ -130,8 +140,14 @@ def search_item(
     last_search = get_last_search_date(string)
     search_string = get_search_string(string)
     for page in range(1, pages_number + 1):
-        url = f"https://www.subito.it/annunci-lombardia/vendita/usato/brescia/?q={search_string}&o={page}"
-
+        if region is None:
+            url = f"https://www.subito.it/vendita/usato/?q={search_string}&o={page}"
+        elif province is None:
+            url = f"https://www.subito.it/annunci-{change_spaces_to_dots(region)}/vendita/usato/?q={search_string}&o={page}"
+        elif city is None:
+            url = f"https://www.subito.it/annunci-{change_spaces_to_dots(region)}/vendita/usato/{change_spaces_to_dots(province)}/?q={search_string}&o={page}"
+        else:
+            url = f"https://www.subito.it/annunci-{change_spaces_to_dots(region)}/vendita/usato/{change_spaces_to_dots(province)}/{change_spaces_to_dots(city)}/?q={search_string}&o={page}"
         data = requests.get(url)
         soup = bs4.BeautifulSoup(data.text, "html.parser")
         divs = soup.find_all("div", {"class": "item-card"})
@@ -235,6 +251,7 @@ def send_as_discord_webhook(object: bs4.element.Tag, string: str):
     titolo_annuncio = get_title(object)
     url_annuncio = get_link(object)
     img_annuncio = get_image_url(object)
+    region = region if region is not None else "italia"
     username = "SubitBOT"
     avatar_url = "https://i.imgur.com/4M34hi2.png"
     content = f"Nuovo risultato per la ricerca: {string}"
@@ -261,6 +278,24 @@ def send_as_discord_webhook(object: bs4.element.Tag, string: str):
     ).execute()
 
 
+def search_to_string(search: dict):
+    search_string = f"{search[fields.STRING]}"
+    search_string += f" {search[fields.REGION].replace(' ', '') if search[fields.REGION] is not None else 'italia'}"
+    search_string += f" {search[fields.PROVINCE].replace(' ', '') if search[fields.PROVINCE] is not None else ''}"
+    search_string += f" {search[fields.CITY].replace(' ', '') if search[fields.CITY] is not None else ''}"
+    search_string = search_string.strip()
+    return search_string
+
+
+def populate_search(search: dict):
+    if fields.REGION not in search:
+        search[fields.REGION] = None
+    if fields.PROVINCE not in search:
+        search[fields.PROVINCE] = None
+    if fields.CITY not in search:
+        search[fields.CITY] = None
+    return search
+
 cols = COLNAMES()
 fields = FIELDS()
 
@@ -278,9 +313,10 @@ if __name__ == "__main__":
 
     for search in searches:
         objects = search_item(**search)
+        search = populate_search(search)
         if use_discord:
             for obj in objects:
-                send_as_discord_webhook(obj, search[fields.STRING])
+                send_as_discord_webhook(obj, search_to_string(search))
                 time.sleep(1)
         if save_as_html:
-            save_to_html(objects, search[fields.STRING])
+            save_to_html(objects, search_to_string(search))
