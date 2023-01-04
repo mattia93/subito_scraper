@@ -1,11 +1,11 @@
 [{
-    "string": "iphone 11",
-    "min_price": 250,
-    "max_price": 400
+    "string": "first_object",
+    "min_price": null,
+    "max_price": null
 
 },
 {
-    "string": "iphone XS",
-    "min_price": 170,
-    "max_price": 270
+    "string": "second_object",
+    "min_price": null,
+    "max_price": null
 }]
