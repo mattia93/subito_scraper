@@ -1,0 +1,11 @@
+name: bs
+channels:
+  - conda-forge
+dependencies:
+  - python
+  - beautifulsoup4
+  - selenium
+  - requests
+  - pandas
+  - python-decouple
+prefix: /Users/mattiachiari/miniforge3/envs/bs

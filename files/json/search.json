@@ -1,0 +1,11 @@
+[{
+    "string": "iphone 11",
+    "min_price": 250,
+    "max_price": 400
+
+},
+{
+    "string": "iphone XS",
+    "min_price": 170,
+    "max_price": 270
+}]
