@@ -27,20 +27,25 @@ You can edit the search parameters like this:
     {
         "name": "search1",
         "min_price": 100,
-        "max_price": 200
+        "max_price": 200,
+        "region": "Lombardia"
     },
     {
         "name": "search2",
-        "min_price": null,
-        "max_price": 300
+        "max_price": 300,
+        "region": "Lombardia",
+        "province": "Varese",
+        "city": "Busto Arsizio"
     },
     {
         "name": "search3",
         "min_price": 400,
-        "max_price": null
     }
 ]
 ```
+In any search, you must specify the `name` parameter. This parameter is used to identify the search and cannot be empty (i.e. `""`).
+Please note that you can specify the `region`, `province` and `city` parameters. If you don't specify the `province` and `city` parameters, the script will search in the whole region. If you don't specify the 'city' parameter, the script will search in the whole province.If you don't specify the `region` parameter, the script will search in the whole country.
+Similarly, you can specify the `min_price` and `max_price` parameters. If you don't specify the `min_price` parameter, the script will search for insertions with a price lower than the `max_price` parameter. If you don't specify the `max_price` parameter, the script will search for insertions with a price higher than the `min_price` parameter.
 
 ### Usage with Discord webhook
 In order to send the results to a discord channel, you need to specify the webhook url in the `.env` file.
