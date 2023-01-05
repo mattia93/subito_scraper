@@ -264,6 +264,9 @@ def search_item(
         data = requests.get(url)
         soup = bs4.BeautifulSoup(data.text, "html.parser")
         divs = soup.find_all("div", {"class": "item-card"})
+        if page == 1 and len(divs) != 0:
+            new_last_search = get_date(divs[0])
+            write_last_search_date(search_description, new_last_search)
         for div in divs:
             if not (is_most_recent(div, last_search)):
                 return objects
@@ -298,12 +301,11 @@ def get_last_search_date(
         for i in range(len(df)):
             if string.strip() in df[COLNAMES.SEARCH][i].strip():
                 date = datetime.datetime.strptime(
-                    df[COLNAMES.DATE][i], "%Y-%m-%d %H:%M:%S.%f"
+                    df[COLNAMES.DATE][i], "%Y-%m-%d %H:%M:%S"
                 )
                 break
-    now = datetime.datetime.now()
-    write_last_search_date(string, now)
     if date is None:
+        now = datetime.datetime.now()
         return now - datetime.timedelta(
             minutes=now.hour * 60 + now.minute,
             seconds=now.second,
