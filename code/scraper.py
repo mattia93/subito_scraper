@@ -43,6 +43,7 @@ class FIELDS:
     REGION = "region"
     PROVINCE = "province"
     CITY = "city"
+    SEARCH_DESCRIPTION = "search_description"
 
 
 def is_from_rivenditore(obj: bs4.element.Tag) -> bool:
@@ -222,19 +223,21 @@ def change_spaces_to_dashes(string: str) -> str:
 
 def search_item(
     string: str,
+    search_description: str,
     region: str = None,
     province: str = None,
     city: str = None,
     pages_number: int = 5,
     min_price: Union[float, None] = None,
     max_price: Union[float, None] = None,
-    sleep_time: int = 5,
+    sleep_time: int = 5
 ) -> List[bs4.element.Tag]:
     """
     Search the item in the specified region, province and city.
 
     Args:
         string (str): string to search.
+        search_description (str): string that represents the search.
         region (str, optional): Name of the region. Defaults to None.
         province (str, optional): Province of the region. Defaults to None.
         city (str, optional): City of the province. Defaults to None.
@@ -247,11 +250,11 @@ def search_item(
         List[bs4.element.Tag]: List of the objects found.
     """
     objects = []
-    last_search = get_last_search_date(string)
+    last_search = get_last_search_date(search_description)
     search_string = get_search_string(string)
     for page in range(1, pages_number + 1):
         if region is None:
-            url = f"https://www.subito.it/vendita/usato/?q={search_string}&o={page}"
+            url = f"https://www.subito.it/annunci-italia/vendita/usato/?q={search_string}&o={page}"
         elif province is None:
             url = f"https://www.subito.it/annunci-{change_spaces_to_dashes(region)}/vendita/usato/?q={search_string}&o={page}"
         elif city is None:
@@ -471,7 +474,7 @@ def search_to_string(search: dict) -> str:
 
 def populate_search(search: dict) -> dict:
     """
-    Populate the search dictionary with None values.
+    Populate the search dictionary with None values and add the search description string.
 
     Args:
         search (dict): The search dictionary.
@@ -485,6 +488,7 @@ def populate_search(search: dict) -> dict:
         search[fields.PROVINCE] = None
     if fields.CITY not in search:
         search[fields.CITY] = None
+    search[fields.SEARCH_DESCRIPTION] = search_to_string(search)
     return search
 
 
@@ -504,11 +508,12 @@ if __name__ == "__main__":
         f.close()
 
     for search in searches:
-        objects = search_item(**search)
         search = populate_search(search)
+        objects = search_item(**search)
+        
         if use_discord:
             for obj in objects:
-                send_as_discord_webhook(obj, search_to_string(search))
+                send_as_discord_webhook(obj, search[fields.SEARCH_DESCRIPTION])
                 time.sleep(1)
         if save_as_html:
-            save_to_html(objects, search_to_string(search))
+            save_to_html(objects, search[fields.SEARCH_DESCRIPTION])
