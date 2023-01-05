@@ -1,17 +1,21 @@
 import bs4
 import time
 import requests
-from os.path import join, dirname
+from os.path import join
 import os
 import datetime
 from pandas import DataFrame
 import pandas as pd
-from discord_webhook import DiscordWebhook, DiscordEmbed
+from discord_webhook import DiscordWebhook
 import json
 from decouple import config
+from typing import Union, List
 
 
 class COLNAMES:
+    """
+    Class that contains the column names of the DataFrame. It implements the Singleton pattern.
+    """
     _instance = None
 
     def __new__(class_, *args, **kwargs):
@@ -24,6 +28,10 @@ class COLNAMES:
 
 
 class FIELDS:
+    """
+    Class that contains the fields of the search file. It implements the Singleton pattern.
+    """
+
     _instance = None
 
     def __new__(class_, *args, **kwargs):
@@ -37,7 +45,16 @@ class FIELDS:
     CITY = "city"
 
 
-def is_from_rivenditore(obj: bs4.element.Tag):
+def is_from_rivenditore(obj: bs4.element.Tag) -> bool:
+    """
+    Check if the object is from a dealer.
+
+    Args:
+        obj (bs4.element.Tag): The object to check.
+
+    Returns:
+        bool: true if the object is from a dealer, false otherwise.
+    """
     spans = [
         span
         for span in obj.find_all("span")
@@ -50,11 +67,29 @@ def is_from_rivenditore(obj: bs4.element.Tag):
     return False
 
 
-def get_search_string(string: str):
+def get_search_string(string: str) -> str:
+    """
+    Get the search string in html format.
+
+    Args:
+        string (str): The string to search.
+
+    Returns:
+        str: The search string in html format.
+    """
     return string.replace(" ", "+")
 
 
-def get_price(obj: bs4.element.Tag):
+def get_price(obj: bs4.element.Tag) -> Union[float, None]:
+    """
+    Get the price of the object.
+
+    Args:
+        obj (bs4.element.Tag): The object to check.
+
+    Returns:
+        Union[float, None]: The price of the object, None if the price is not specified.
+    """
     price = obj.find("p", {"class": "price"}).get_text()
     try:
         price = float(price.split("\xa0")[0])
@@ -63,7 +98,20 @@ def get_price(obj: bs4.element.Tag):
         return None
 
 
-def is_in_price_range(obj: bs4.element.Tag, min_price: int, max_price: int):
+def is_in_price_range(
+    obj: bs4.element.Tag, min_price: Union[float, None], max_price: Union[float, None]
+) -> bool:
+    """
+    Check if the object is in the price range.
+
+    Args:
+        obj (bs4.element.Tag):
+        min_price (Union[float, None]): Minimum price.
+        max_price (Union[float, None]): Maximum price.
+
+    Returns:
+        bool: True if the object is in the price range, false otherwise.
+    """
     price = get_price(obj)
     if price is None:
         return True
@@ -76,7 +124,16 @@ def is_in_price_range(obj: bs4.element.Tag, min_price: int, max_price: int):
     return False
 
 
-def replace_month(date: str):
+def replace_month(date: str) -> str:
+    """
+    Replace the month in the date string.
+
+    Args:
+        date (str): The date string.
+
+    Returns:
+        str: The date string with the month replaced and the year set to the current year.
+    """
     current_year = datetime.datetime.now().year
     date = date.replace("gen", f"01 {current_year}")
     date = date.replace("feb", f"02 {current_year}")
@@ -93,7 +150,16 @@ def replace_month(date: str):
     return date
 
 
-def parse_date(date_str: str):
+def parse_date(date_str: str) -> datetime.datetime:
+    """
+    Parse the date string.
+
+    Args:
+        date_str (str): The date string.
+
+    Returns:
+        datetime.datetime: The parsed date.
+    """
     date = date_str.replace("alle", "")
     date = date.replace("Oggi", datetime.datetime.now().strftime("%d %m %Y "))
     date = date.replace(
@@ -105,7 +171,16 @@ def parse_date(date_str: str):
     return date
 
 
-def get_date(obj: bs4.element.Tag):
+def get_date(obj: bs4.element.Tag) -> Union[datetime.datetime, None]:
+    """
+    Get the date of the object.
+
+    Args:
+        obj (bs4.element.Tag): The object to check.
+
+    Returns:
+        Union[datetime.datetime, None]: The date of the object, None if the date is not specified.
+    """
     try:
         city_span = obj.find("span", {"class": "city"})
         date_str = city_span.find_next_sibling("span").get_text()
@@ -115,15 +190,34 @@ def get_date(obj: bs4.element.Tag):
         return None
 
 
-def is_most_recent(obj: bs4.element.Tag, last_search: datetime.datetime):
+def is_most_recent(obj: bs4.element.Tag, last_search: datetime.datetime) -> bool:
+    """
+    Check if the object is more recent than the last search.
+
+    Args:
+        obj (bs4.element.Tag): The object to check.
+        last_search (datetime.datetime): The last search date.
+
+    Returns:
+        bool: True if the object is more recent than the last search, false otherwise.
+    """
     date = get_date(obj)
     if date is None:
         return True
     return date > last_search
 
 
-def change_spaces_to_dots(region: str):
-    return region.lower().replace(" ", "-")    
+def change_spaces_to_dashes(string: str) -> str:
+    """
+    Change the spaces in the string to dashes.
+
+    Args:
+        string (str): The string to change.
+
+    Returns:
+        str: The string with the spaces changed to dashes.
+    """
+    return string.lower().replace(" ", "-")
 
 
 def search_item(
@@ -132,10 +226,26 @@ def search_item(
     province: str = None,
     city: str = None,
     pages_number: int = 5,
-    min_price: int = None,
-    max_price: int = None,
+    min_price: Union[float, None] = None,
+    max_price: Union[float, None] = None,
     sleep_time: int = 5,
-):
+) -> List[bs4.element.Tag]:
+    """
+    Search the item in the specified region, province and city.
+
+    Args:
+        string (str): string to search.
+        region (str, optional): Name of the region. Defaults to None.
+        province (str, optional): Province of the region. Defaults to None.
+        city (str, optional): City of the province. Defaults to None.
+        pages_number (int, optional): Number of web pages to search. Defaults to 5.
+        min_price (Union[float, None], optional): Minimum price. Defaults to None.
+        max_price (Union[float, None], optional): Maximum price. Defaults to None.
+        sleep_time (int, optional): Time to sleep between requests in seconds. Defaults to 5.
+
+    Returns:
+        List[bs4.element.Tag]: List of the objects found.
+    """
     objects = []
     last_search = get_last_search_date(string)
     search_string = get_search_string(string)
@@ -143,11 +253,11 @@ def search_item(
         if region is None:
             url = f"https://www.subito.it/vendita/usato/?q={search_string}&o={page}"
         elif province is None:
-            url = f"https://www.subito.it/annunci-{change_spaces_to_dots(region)}/vendita/usato/?q={search_string}&o={page}"
+            url = f"https://www.subito.it/annunci-{change_spaces_to_dashes(region)}/vendita/usato/?q={search_string}&o={page}"
         elif city is None:
-            url = f"https://www.subito.it/annunci-{change_spaces_to_dots(region)}/vendita/usato/{change_spaces_to_dots(province)}/?q={search_string}&o={page}"
+            url = f"https://www.subito.it/annunci-{change_spaces_to_dashes(region)}/vendita/usato/{change_spaces_to_dashes(province)}/?q={search_string}&o={page}"
         else:
-            url = f"https://www.subito.it/annunci-{change_spaces_to_dots(region)}/vendita/usato/{change_spaces_to_dots(province)}/{change_spaces_to_dots(city)}/?q={search_string}&o={page}"
+            url = f"https://www.subito.it/annunci-{change_spaces_to_dashes(region)}/vendita/usato/{change_spaces_to_dashes(province)}/{change_spaces_to_dashes(city)}/?q={search_string}&o={page}"
         data = requests.get(url)
         soup = bs4.BeautifulSoup(data.text, "html.parser")
         divs = soup.find_all("div", {"class": "item-card"})
@@ -166,7 +276,18 @@ def get_last_search_date(
     string: str,
     filename: str = "last_searches_dates",
     target_folder: str = join("files", "csv"),
-):
+) -> datetime.datetime:
+    """
+    Get the last search date of the string. If the string is not found, return the current date at 00:00.
+
+    Args:
+        string (str): The string to search.
+        filename (str, optional): Name of the file that contains the last search dates. Defaults to "last_searches_dates".
+        target_folder (str, optional): Folder where the last searches file is located. Defaults to join("files", "csv").
+
+    Returns:
+        datetime.datetime: The last search date of the string.
+    """
     filename = f"{filename}.csv"
     date = None
     if os.path.exists(join(target_folder, filename)):
@@ -194,7 +315,16 @@ def write_last_search_date(
     date: datetime.datetime,
     filename: str = "last_searches_dates",
     target_folder: str = join("files", "csv"),
-):
+) -> None:
+    """
+    Write the last search date of the string.
+
+    Args:
+        string (str): The string to search.
+        date (datetime.datetime): The date to write.
+        filename (str, optional): Name of the file that contains the last search dates. Defaults to "last_searches_dates".
+        target_folder (str, optional): Folder where the last searches file is located. Defaults to join("files", "csv").
+    """
     filename = f"{filename}.csv"
     os.mkdir(target_folder) if not os.path.exists(target_folder) else None
     if os.path.exists(join(target_folder, filename)):
@@ -210,7 +340,16 @@ def write_last_search_date(
     df.to_csv(join(target_folder, filename))
 
 
-def get_title(obj: bs4.element.Tag):
+def get_title(obj: bs4.element.Tag) -> Union[str, None]:
+    """
+    Get the title of the object.
+
+    Args:
+        obj (bs4.element.Tag): The object.
+
+    Returns:
+        Union[str, None]: The title of the object. None if the object has no title.
+    """
     try:
         title = obj.find("h2").get_text()
         return title
@@ -218,7 +357,16 @@ def get_title(obj: bs4.element.Tag):
         return None
 
 
-def get_link(obj: bs4.element.Tag):
+def get_link(obj: bs4.element.Tag) -> Union[str, None]:
+    """
+    Get the link of the object.
+
+    Args:
+        obj (bs4.element.Tag): The object.
+
+    Returns:
+        Union[str, None]: The link of the object. None if the object has no link.
+    """
     try:
         link = obj.find("a")["href"]
         return link
@@ -226,7 +374,16 @@ def get_link(obj: bs4.element.Tag):
         return None
 
 
-def get_image_url(obj: bs4.element.Tag):
+def get_image_url(obj: bs4.element.Tag) -> Union[str, None]:
+    """
+    Get the image url of the object.
+
+    Args:
+        obj (bs4.element.Tag): The object.
+
+    Returns:
+        Union[str, None]: The image url of the object. None if the object has no image url.
+    """
     try:
         image_url = obj.find("img")["src"]
         return image_url
@@ -236,7 +393,16 @@ def get_image_url(obj: bs4.element.Tag):
 
 def save_to_html(
     objects: list, filename: str, target_folder: str = join("files", "html")
-):
+) -> None:
+    """
+    Save the objects to an html file.
+
+    Args:
+        objects (list): List of objects to save.
+        filename (str): Name of the HTML file.
+        target_folder (str, optional): Folder where the HTML file will be saved. Defaults to join("files", "html").
+    """
+    os.mkdir(target_folder) if not os.path.exists(target_folder) else None
     with open(join(target_folder, f"{filename}.html"), "w") as f:
         f.write('<head><meta charset="utf-8"></head><body>')
         for o in objects:
@@ -245,6 +411,13 @@ def save_to_html(
 
 
 def send_as_discord_webhook(object: bs4.element.Tag, string: str):
+    """
+    Send the object as a Discord webhook.
+
+    Args:
+        object (bs4.element.Tag): The object to send.
+        string (str): The string to search.
+    """
     url = config("url")
     data_annuncio = get_date(object)
     prezzo_annuncio = f"{get_price(object)} €"
@@ -278,7 +451,16 @@ def send_as_discord_webhook(object: bs4.element.Tag, string: str):
     ).execute()
 
 
-def search_to_string(search: dict):
+def search_to_string(search: dict) -> str:
+    """
+    Convert the search dictionary to a string.
+
+    Args:
+        search (dict): The search dictionary.
+
+    Returns:
+        str: The search string.
+    """
     search_string = f"{search[fields.STRING]}"
     search_string += f" {search[fields.REGION].replace(' ', '') if search[fields.REGION] is not None else 'italia'}"
     search_string += f" {search[fields.PROVINCE].replace(' ', '') if search[fields.PROVINCE] is not None else ''}"
@@ -287,7 +469,16 @@ def search_to_string(search: dict):
     return search_string
 
 
-def populate_search(search: dict):
+def populate_search(search: dict) -> dict:
+    """
+    Populate the search dictionary with None values.
+
+    Args:
+        search (dict): The search dictionary.
+
+    Returns:
+        dict: The populated search dictionary.
+    """
     if fields.REGION not in search:
         search[fields.REGION] = None
     if fields.PROVINCE not in search:
@@ -295,6 +486,7 @@ def populate_search(search: dict):
     if fields.CITY not in search:
         search[fields.CITY] = None
     return search
+
 
 cols = COLNAMES()
 fields = FIELDS()
