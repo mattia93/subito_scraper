@@ -91,7 +91,8 @@ def get_price(obj: bs4.element.Tag) -> Union[float, None]:
     Returns:
         Union[float, None]: The price of the object, None if the price is not specified.
     """
-    price = obj.find("p", {"class": "price"}).get_text()
+    # price = obj.find("p", {"class": "price"}).get_text()
+    price = obj.find("p", class_=lambda x: "price" in x).get_text()
     try:
         price = float(price.split("\xa0")[0])
         return price
@@ -188,7 +189,7 @@ def get_date(obj: bs4.element.Tag) -> Union[datetime.datetime, None]:
         date = parse_date(date_str)
         return date
     except AttributeError:
-        return None
+        return datetime.datetime.now()
 
 
 def is_most_recent(obj: bs4.element.Tag, last_search: datetime.datetime) -> bool:
@@ -261,7 +262,17 @@ def search_item(
             url = f"https://www.subito.it/annunci-{change_spaces_to_dashes(region)}/vendita/usato/{change_spaces_to_dashes(province)}/?q={search_string}&o={page}"
         else:
             url = f"https://www.subito.it/annunci-{change_spaces_to_dashes(region)}/vendita/usato/{change_spaces_to_dashes(province)}/{change_spaces_to_dashes(city)}/?q={search_string}&o={page}"
-        data = requests.get(url)
+        agent = {"Accept" : 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "it-IT,it;q=0.9",
+                "Cookie": '__eoi=ID=b9c7a544a92dc432:T=1742897063:RT=1744363934:S=AA-AfjYwgHYeLEKRgB2WQ7rdxdaw; __gads=ID=12ebd7dbb4ff943b:T=1742897063:RT=1744363934:S=ALNI_MYDnfGMvhqDGhC-zip5bTWlOCvCNw; __gpi=UID=000010814555fefe:T=1742897063:RT=1744363934:S=ALNI_MaStPb7IAzGSGrpQG0ucgsseCntLg; FPID=FPID2.2.VoB%2Ffj%2FFTDiEI2W65BfZwQsSzaBs5m%2BDepDPmMcCH%2FI%3D.1742814851; _fbp=fb.1.1742897063917.132445923359654312; _ga_XXXXXXXXXX=GS1.1.1744362486.22.1.1744362519.0.0.324907197; _ga_D72SGH4DYJ=GS1.1.1744362486.22.1.1744362519.0.0.820200052; ttcsid_BUIJNV8M9N0HSM9DNOT0=1744362486375.6.1744362518161; kampyleSessionPageCounter=3; FPAU=1.1.1883419564.1742814851; _ga=GA1.1.410475542.1742897063; _pin_unauth=dWlkPU9HUTVZVEEyWldNdE5EUTNNUzAwT1RNNUxUZzJPRGN0TmpJMU1tSm1aR0l6TVRabA; _pulse2data=b6ae025a-4ba2-45cf-bcdf-a900dc08ad7b%2Cv%2C112705529%2C1744363417625%2CeyJpc3N1ZWRBdCI6IjIwMjUtMDMtMjVUMTA6MDQ6MjJaIiwiZW5jIjoiQTEyOENCQy1IUzI1NiIsImFsZyI6ImRpciIsImtpZCI6IjIifQ..TDMRLp4s2ILZdmbIMQe-Mg.R9oaIEkFitzW-6jWyhlf2og5M4dF4SqIRIzCX9GcZ9l64Ti6XnGsnFYfaUK6WAoGvMsyqC-cLw16Q8aadgucKDBupQpCOIBO3jlJNjhTIp9fvTdjDKvKxHvXs4GnrnJ9xVdrm44V3wkB3JIYpT5DJGIiRFke5i1W98OVGQSzWNaYGBblNkf3U3jPJLgMIRJzxPcK9c5WY1itAIw6yvBKkHfyJVsela95hKM9C4PllHU2ksTJF7VRcUxcC1thNoIE.clgIP0qamIVNqiY36jBXog%2C0%2C%2Ctrue%2C%2CeyJraWQiOiIyIiwiYWxnIjoiSFMyNTYifQ..1DVLkXOOlDuTUv-UzkP58A7GHsA5n5Iaf7BsRA7QFGg; _tt_enable_cookie=1; _ttp=01JQ6C5A36NAZS331Z950THAR7_.tt.1; ttcsid=1744362486376.6.1744362517951; w_page_view_counter=8; __rtbh.lid=%7B%22eventType%22%3A%22lid%22%2C%22id%22%3A%227UJG1AWIAZ00IrSlP7KP%22%2C%22expiryDate%22%3A%222026-04-11T09%3A08%3A37.680Z%22%7D; __rtbh.uid=%7B%22eventType%22%3A%22uid%22%2C%22id%22%3A%22112705529%22%2C%22expiryDate%22%3A%222026-04-11T09%3A08%3A37.975Z%22%7D; _lr_atsDirect=; _lr_env=eyJ0aW1lc3RhbXAiOjE3NDQzNjI0ODYzODEsInZlcnNpb24iOiIxLjYuMCIsImVudmVsb3BlIjoiQW9XNm93cWJHLXptejd6aEZ2c0J6eEtLWmFOczlWZmJOUXVFSi1HRlpObFpxbEtqMVJGaUFGQk9CZTN4b0tyMm5ESDQtajVOWjRPTXR0OXl1UURsYnFyT1pISHphQl9NUkRmai1CcjRjdjJXN05Pa1g2ZDRkR1BUMWxJbmV0Mi02UHBEYldSbGxhOXc2RGpFYlRUbE5CWW1fY1Y4QUpGeF8tLWx2U2w1dWQtdHh6cjI5TDVNYkZwdkxDMnNSd09VdGV1RHJBdUoiLCJjcmVhdGlvblRpbWVzdGFtcCI6MTc0NDM2MjQ4NjM4MX0%3D; _lr_google_env=; _lr_pairId=eyJ0aW1lc3RhbXAiOjE3NDQzNjI0ODYzODIsInZlcnNpb24iOiIxLjYuMCIsImVudmVsb3BlIjpbIkF6b0ViOGVTc0pVUnliRFVvaFIzN0RMVStVVkF0RkNBRzFHNjYwYXY4TVNQIl0sImNyZWF0aW9uVGltZXN0YW1wIjoxNzQ0MzYyNDg2MzgyfQ%3D%3D; FPLC=cfCL4YUj90eEpbwDzENzjiqQP0GpDzuN3C2W%2BOxurBsf6FDui7mLrxr89trgECLBZwiXiFQL3Q5wkvGh8SHdBq3cbE7X%2FUieAiTXQVqckaeWcX7u%2BhO5X8BwjkrAWQ%3D%3D; crto_is_user_optout=false; crto_mapped_user_id=T82BVyo5SnKs0GGVQlKR-KLdaqxyen0U; cto_bundle=FWw3O19xQXlPMSUyRlJYb0RndFhNbkJRJTJCNUpWY2xDV3ZiSzZpZ3RLdGpnTCUyRkpPcEZtRTBYSU5RTWRTSHpGazkwdnFkWmN3SjhJaFlUeEhaelQ1NSUyQkNtbWdHWUVGZmhiaTdLZnVHcVNYZDclMkJxMCUyQjdvQWtsTFJ2RGNBdCUyRjUxcFRJZWF4WGl0; kampyleUserSession=1744362486531; kampyleUserSessionsCount=35; user_data={"id":"112705529","email":"bbd25278ebb0eda915af69b2b650eebdcbe8864f836d41d6454135771fd61730","name":"Mattia%20Chiari","ppid":"a32381eaa0d36172f091299466ea0fb3"}; _ga_VNNKRJLK19=GS1.1.1744205756.1.1.1744205830.0.0.0; bottega=mc1xf69f6544-ea6d-464e-a0d7-f721580d228c; _lr_geo_location=IT; _lr_geo_location_state=25; w_ad_view_counter=2; _lr_sampling_rate=100; _gcl_au=1.1.1815676088.1742897062; manageads.lastSeenBanner=228; _ga_XXXXXXXXXX=deleted; idl_env=Alu12u_lrJMCGXuKKZsXfnqJdvsayEzUdeZp_ArTGRhGnR-fx05aIOI26d8jJcwHE_SR0NRTRKhUIMdwffwp0RbjTznd5XcShyh3WbSYwbQ4VPkQBjeJiw0EVA6noNd4fMkxMb3PKggrEq9Da_TP0yHN85vgxP8NIfsoRAAJLC2BFxeJzDiXSWZJgoJbmOvI-YOY3M0P; idl_env_cst=IyyiLMcsQg%3D%3D; idl_env_last=Tue%2C%2001%20Apr%202025%2015%3A39%3A35%20GMT; __gsas=ID=edd0dac420d4d96a:T=1742897443:RT=1742897443:S=ALNI_MaaAk2dJR6Ls9HVN_3TtQJ_3jvo5w; kampyle_userid=50eb-48e7-279b-a380-0655-e84a-b6b1-f5a7; didomi_token=eyJ1c2VyX2lkIjoiMTk1Y2NjMmEtMWZiMS02ODczLWExYmYtNjIwNmQyMWIwOTE4IiwiY3JlYXRlZCI6IjIwMjUtMDMtMjVUMTA6MDQ6MjIuMzk1WiIsInVwZGF0ZWQiOiIyMDI1LTAzLTI1VDEwOjA0OjIzLjc0MFoiLCJ2ZW5kb3JzIjp7ImVuYWJsZWQiOlsiZ29vZ2xlIiwiYzphbXBsaXR1ZGUiLCJjOm1pY3Jvc29mdC1vbmVkcml2ZS1saXZlLXNkayIsImM6YXBwc2ZseWVyLTlqY3duaVk5IiwiYzpiaW5nLWFkcyIsImM6cm9ja2V0LWZ1ZWwiLCJjOnJhZGl1bW9uZSIsImM6YWR2ZXJ0aXNpbmdjb20iLCJjOmtydXgtZGlnaXRhbCIsImM6eWFob28tYWQtZXhjaGFuZ2UiLCJjOnlhaG9vLWFuYWx5dGljcyIsImM6cXVhbnRjYXN0LW1lYXN1cmVtZW50IiwiYzp5YWhvby1hZC1tYW5hZ2VyLXBsdXMiLCJjOm9tbml0dXJlLWFkb2JlLWFuYWx5dGljcyIsImM6YWRwaWxvdGNvbm5lY3RhZCIsImM6Z3JhcGVzaG90IiwiYzpxdWFudHVtLWFkdmVydGlzaW5nIiwiYzpicmlnaHRyb2xsIiwiYzp4MSIsImM6dHViZW1vZ3VsIiwiYzpzZWdtZW50IiwiYzpha2FtYWktY29va2llLXN5bmMiLCJjOmFjY29yZGFudC1tZWRpYSIsImM6YWRtb2IiLCJjOmFvbC1jZG4iLCJjOm1lZGFsbGlhLWloenJ5RkxZIiwiYzpzYWxlc2ZvcmNlLUNQQkZFZkhQIiwiYzpvcHRpbWl6ZWx5LUVOUUVpaVpUIiwiYzpha2FjZG9yb2QtV0FEN2lYdGgiLCJjOm1pY3Jvc29mdC1hbmFseXRpY3MiLCJjOnR1cmJvIiwiYzp0aWt0b2stS1pBVVFMWjkiLCJjOmF0aW50ZXJuZS1jV1FLSGVKWiIsImM6Ymx1ZWthaSIsImM6Z29vZ2xlYW5hLTRUWG5KaWdSIiwiYzpzb2Npb21hbnRpLW1NVEc4eGc0IiwiYzphd3MtY2xvdWRmcm9udCIsImM6eWFob28tZ2VtaW5pLWFuZC1mbHVycnkiLCJjOnN1YmxpbWVzay1wWjdBbnk3RyIsImM6bWVldHJpY3NnLU5kRU44V3hUIiwiYzpjZW50cm8taVVXVm1ONE4iLCJjOm1pY3Jvc29mdCIsImM6aGF2YXNtZWRpLUJBRzdwSkRlIiwiYzpwaW50ZXJlc3QiLCJjOnNwb3R4aW5jLXdpQ0VmTHluIiwiYzptZWRpYW1hdGgtd0pRd1RBWjIiLCJjOmRpZG9taSJdfSwicHVycG9zZXMiOnsiZW5hYmxlZCI6WyJnZW9sb2NhdGlvbl9kYXRhIiwiZGV2aWNlX2NoYXJhY3RlcmlzdGljcyIsImNvb2tpZWFuYS1rQ0NSR3o0bSIsImNvb2tpZWRpLW5OZTIzUWpkIiwiY29va2lldGVjLTlxZkFFVndrIiwiYXVkaWVuY2VtLXhlZGVVMmdRIl19LCJ2ZW5kb3JzX2xpIjp7ImVuYWJsZWQiOlsiZ29vZ2xlIiwiYzp0dXJibyJdfSwidmVyc2lvbiI6MiwiYWMiOiJEQnlBWUFFWUFMSUNTd0pSQVVWQkxHQ2VjRkNNTFJndEhCZWlEQmNHRGdBQS5EQnlBWUFFWUFMSUNTd0pSQVVWQkxHQ2VjRkNNTFJndEhCZWlEQmNHRGdBQSJ9; euconsent-v2=CQO03QAQO03QAAHABBENBiFsAP_gAEPgABCYJQEB5C5cASFCACp0AOsAAYUHQFAAAkAABAIBASABAIIAIIQEgGAQIAAAAAAAAAIAICQAAAAgAAAAAQAAAAAAIAAAAACQAAAAIAAAAAABAQAAAAAAAIAAEAAAgEAAAAAAgAAAAAIACEgAAAAAAAAAAAAAAAAFAAAAAAAAAAAIAAAIACgEAAAAAAAAAAAAABAIBAAAAAAEEb4D4ACwAKgAXAA4AB4AEAAKgAZAA0ACOAEwAKEAXABdADEAHoAPwAhABHADKAH6AQgAi0BHAEdAPaAmIBTYC8wGTgMsAfuBG8AA.f_wACHwAAAAA; displayCookieConsent=y; kppid=CEECBF5FAEE446C579E97271; akacd_orodha=2177452799~rv=84~id=266e8d35553f88f7c2926592bf4ed0f4',
+                "Priority": "u=0, i",
+                "Referer": "https://www.subito.it/",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.4 Safari/605.1.15"}
+        data = requests.get(url, headers=agent)
         soup = bs4.BeautifulSoup(data.text, "html.parser")
         divs = soup.find_all("div", {"class": "item-card"})
         if page == 1 and len(divs) != 0:
@@ -429,7 +440,7 @@ def send_as_discord_webhook(object: bs4.element.Tag, string: str):
     titolo_annuncio = get_title(object)
     url_annuncio = get_link(object)
     img_annuncio = get_image_url(object)
-    region = region if region is not None else "italia"
+    region = "italia"
     username = "SubitBOT"
     avatar_url = "https://i.imgur.com/4M34hi2.png"
     content = f"Nuovo risultato per la ricerca: {string}"
