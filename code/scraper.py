@@ -509,8 +509,7 @@ cols = COLNAMES()
 fields = FIELDS()
 
 
-if __name__ == "__main__":
-
+def run():
     use_discord = config("use_discord", cast=bool, default=False)
     save_as_html = config("save_as_html", cast=bool, default=False)
 
@@ -530,3 +529,7 @@ if __name__ == "__main__":
                 time.sleep(1)
         if save_as_html:
             save_to_html(objects, search[fields.SEARCH_DESCRIPTION])
+
+
+if __name__ == "__main__":
+    run()
